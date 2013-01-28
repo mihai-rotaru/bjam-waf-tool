@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # per rosengren 2011
 
-from os import sep
+from os import sep, name
 from os.path import abspath
 from waflib import Logs
 from waflib.TaskGen import feature, after_method
@@ -44,6 +44,7 @@ def process_bjam(self):
 
 class bjam_creator(Task):
     ext_out = 'bjam_exe'
+    before = ['bjam_build']
     vars=['BJAM_SRC', 'BJAM_UNAME']
     def run(self):
         env = self.env
@@ -60,19 +61,23 @@ class bjam_creator(Task):
         bjam_exe_relpath = 'bin.' + env.BJAM_UNAME + '/bjam'
         bjam_exe = bjam.find_resource(bjam_exe_relpath)
         if bjam_exe:
+            Logs.warn( 'bjam executable found: %s' % bjam_exe.abspath() )
             env.BJAM = bjam_exe.srcpath()
             return 0
-        bjam_cmd = ['./build.sh']
-        Logs.debug('runner: ' + bjam.srcpath() + '> ' + str(bjam_cmd))
-        result = self.exec_command(bjam_cmd, cwd=bjam.srcpath())
-        if not result == 0:
-            Logs.error('bjam failed')
+        if name == 'nt':
+            bjam_cmd = ['cmd', '/c', 'bootstrap.bat']
+        else:
+            bjam_cmd = ['bootstrap.sh']
+        Logs.warn( 'Building bjam: %s' % str(bjam_cmd) )
+        result = self.exec_command(bjam_cmd, cwd=bjam.abspath())
+        if not( result == 0 ):
+            Logs.error('bjam bootstrap failed (non-zero return value)')
             return -1
         bjam_exe = bjam.find_resource(bjam_exe_relpath)
         if bjam_exe:
             env.BJAM = bjam_exe.srcpath()
             return 0
-        Logs.error('bjam failed')
+        Logs.error('bjam bootsrap succeeded, but cannot find bjam executable.')
         return -1
 
 class bjam_build(Task):
