@@ -50,6 +50,9 @@ class bjam_creator(Task):
         gen = self.generator
         path = gen.path
         bld = gen.bld
+        if not env.BJAM_SRC:
+            Logs.error('bjam needs to be built; please re-configure the project providing the location of bjam sources with the --bjam_src option.')
+            return -1
         bjam = gen.bld.root.find_dir(env.BJAM_SRC)
         if not bjam:
             Logs.error('Can not find bjam source')
